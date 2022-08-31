@@ -1,6 +1,11 @@
 import test from 'ava';
 
-import { appendOutputFile, fetchTweets, writeOutputFile } from './async';
+import {
+  appendOutputFile,
+  fetchUsers,
+  fetchTweets,
+  writeOutputFile,
+} from './async';
 
 // test('getABC', async (t) => {
 //   t.deepEqual(await asyncABC(), ['a', 'b', 'c']);
@@ -12,8 +17,14 @@ import { appendOutputFile, fetchTweets, writeOutputFile } from './async';
 //   t.pass();
 // });
 
-test('fs path', async (t) => {
-  writeOutputFile(['a', 'b', 'c']);
-  appendOutputFile(['a', 'b', 'c']);
-  t.pass();
-});
+// test('fetchFollowers', async (t) => {
+//   t.timeout(100000);
+//   await fetchUsers();
+//   t.pass();
+// });
+
+// test('fs path', async (t) => {
+//   writeOutputFile(['a', 'b', 'c']);
+//   appendOutputFile(['a', 'b', 'c']);
+//   t.pass();
+// });

@@ -3,7 +3,9 @@
   "compilerOptions": {
     "target": "esnext",
     "outDir": "build/module",
-    "module": "esnext"
+    "module": "esnext",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
   },
   "exclude": [
     "node_modules/**"

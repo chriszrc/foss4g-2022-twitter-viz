@@ -37,7 +37,8 @@
     "version": "standard-version",
     "reset-hard": "git clean -dfx && git reset --hard && npm i",
     "prepare-release": "run-s reset-hard test cov:check doc:html version doc:publish",
-    "run:dist": "npm run build:main && node --experimental-modules --es-module-specifier-resolution=node build/main/main.js"
+    "run:dist": "tsc -p tsconfig.build.json && node --experimental-modules --es-module-specifier-resolution=node build/main/main.js",
+    "run:dist-module": "npm run build:module && node --experimental-modules --es-module-specifier-resolution=node build/module/main.js"
   },
   "engines": {
     "node": ">=10"

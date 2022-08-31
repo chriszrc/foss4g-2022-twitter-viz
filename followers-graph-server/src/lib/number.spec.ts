@@ -1,9 +1,17 @@
 import test from 'ava';
 
-import { double, power } from './number';
+import { exploreTweets, fixUsersWithFollowers } from './number';
 
-test('double', (t) => {
-  t.is(double(2), 4);
+test('exploreTweets', (t) => {
+  console.log('here');
+  exploreTweets();
+  t.pass();
+});
+
+test('fixedUsersWithFollowers', (t) => {
+  console.log('here');
+  fixUsersWithFollowers();
+  t.pass();
 });
 
 // test('power', (t) => {

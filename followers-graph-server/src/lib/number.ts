@@ -1,51 +1,45 @@
-/**
- * Multiplies a value by 2. (Also a full example of TypeDoc's functionality.)
- *
- * ### Example (es module)
- * ```js
- * import { double } from 'typescript-starter'
- * console.log(double(4))
- * // => 8
- * ```
- *
- * ### Example (commonjs)
- * ```js
- * var double = require('typescript-starter').double;
- * console.log(double(4))
- * // => 8
- * ```
- *
- * @param value - Comment describing the `value` parameter.
- * @returns Comment describing the return type.
- * @anotherNote Some other value.
- */
-export const double = (value: number) => {
-  return value * 2;
+import tweets from '../data/tweets.json';
+import users from '../data/users.json';
+import usersWithFollowers from '../data/usersWithFollowers_old.json';
+import { writeOutputFile } from './async';
+
+export const exploreTweets = () => {
+  console.log(tweets.length);
+
+  // const tweets = tweetsWithFollowers.tweets;
+  // const followers = tweetsWithFollowers.followers;
+  // const result = {};
+  // tweets.forEach(tweet=>{
+  //     const tweetId = tweet.id;
+  //     const tweetFollowers = followers.filter(follower=>follower.tweetId === tweetId);
+  //     result[tweetId] = tweetFollowers.length;
+  // } );
+  // return result;
 };
 
-/**
- * Raise the value of the first parameter to the power of the second using the
- * es7 exponentiation operator (`**`).
- *
- * ### Example (es module)
- * ```js
- * import { power } from 'typescript-starter'
- * console.log(power(2,3))
- * // => 8
- * ```
- *
- * ### Example (commonjs)
- * ```js
- * var power = require('typescript-starter').power;
- * console.log(power(2,3))
- * // => 8
- * ```
- * @param base - the base to exponentiate
- * @param exponent - the power to which to raise the base
- */
-export const power = (base: number, exponent: number) => {
-  /**
-   * This es7 exponentiation operator is transpiled by TypeScript
-   */
-  return base ** exponent;
+export const fixUsersWithFollowers = () => {
+  const usersFlat = users.flat();
+  // console.log(usersFlat.length);
+  // const idx = usersFlat.findIndex((u) => u.username === 'SimonBergmeier');
+  // console.log(idx);
+  const uniqueUserIds = new Set(usersFlat.map((u) => u.id));
+
+  const fixedUsersWithFollowers = [];
+
+  const usersWithFollowersArr = usersWithFollowers as any[];
+
+  console.log('here');
+
+  usersWithFollowersArr.forEach((user) => {
+    const fixedUser = {
+      ...user,
+      followerCount: user.followers.length,
+      followers: user.followers.filter((f) => uniqueUserIds.has(f.id)),
+    };
+    fixedUsersWithFollowers.push(fixedUser);
+  });
+
+  writeOutputFile('usersWithFollowers.json', fixedUsersWithFollowers);
+
+  // console.log('lenght=' + fixedUsersWithFollowers.length);
 };

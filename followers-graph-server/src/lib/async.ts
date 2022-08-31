@@ -6,6 +6,9 @@ import fs from 'fs';
 import path from 'path';
 // const __dirname = path.resolve();
 
+import tweetsJson from '../data/tweets.json';
+import usersJson from '../data/users.json';
+
 //TODO this is bulllllllshhiiiiittttt - https://github.com/microsoft/TypeScript/issues/13135
 // import TwitterPaginatedResponse = tasTypes.TwitterPaginatedResponse;
 // import TwitterResponse = tasTypes.TwitterResponse;
@@ -44,84 +47,149 @@ export const fetchTweets = async () => {
     return tweets;
   };
 
+  //NOTE about 5400 tweets
   const getTweetsRecursive = async (nextToken?: string) => {
     const tweets = await getTweets(nextToken);
     if (tweets.meta.next_token) {
-      appendOutputFile(tweets.data);
+      appendOutputFile('tweetsWithFollowers.json', tweets.data);
       await getTweetsRecursive(tweets.meta.next_token);
     } else {
-      appendOutputFile(tweets.data);
+      appendOutputFile('tweetsWithFollowers.json', tweets.data);
     }
   };
 
-  writeOutputFile('[', false);
+  writeOutputFile('tweetsWithFollowers.json', '[', false);
   await getTweetsRecursive();
-  appendOutputFile(']', false);
+  appendOutputFile('tweetsWithFollowers.json', ']', false);
 
   // console.log(tweets.meta);
   // console.log(tweets.data.length);
   // console.log(tweets.includes.users[0]);
+  //NOTE then I added the "tweetsWithFollowers.json" file manually to the /data folder, i know, cheating
 };
 
-export const fetchFollowers = async <T extends Get2TweetsSearchRecentResponse>(
-  tweets: T
+export const fetchUsers = async <T extends Get2TweetsSearchRecentResponse>(
+  tweets?: T
 ) => {
-  const distinctUserIds = new Set(tweets.includes.users.map((user) => user.id));
+  //NOTE about 1300 distinct users
+  const distinctUserIds = new Set(
+    tweetsJson.map((ta) => ta.map((t) => t.author_id)).flat()
+  );
 
   console.log(distinctUserIds);
+  console.log(distinctUserIds.size);
 
-  const distinctUsers = await client.users.findUsersById({
-    ids: Array.from(distinctUserIds),
-    'user.fields': ['location'],
-  });
+  const userIdBatch = [];
 
-  console.log(distinctUsers);
+  writeOutputFile('users.json', '[', false);
 
-  console.log(distinctUsers.data[0]);
+  for (const userId of distinctUserIds) {
+    userIdBatch.push(userId);
 
-  //TODO execute in batched parallel loop
-  const followers = await client.users.usersIdFollowers(
-    distinctUsers.data[0].id,
-    {
-      max_results: 1000,
+    if (userIdBatch.length === 99) {
+      const distinctUsers = await client.users.findUsersById({
+        ids: userIdBatch,
+        'user.fields': ['location', 'profile_image_url'],
+      });
+
+      console.log(distinctUsers.data.length);
+
+      appendOutputFile('users.json', distinctUsers.data);
+
+      //reset the batch
+      userIdBatch.length = 0;
     }
-  );
+  }
 
-  console.log(followers);
-
-  const moreFollowers = await client.users.usersIdFollowers(
-    distinctUsers.data[0].id,
-    {
-      max_results: 1000,
-      pagination_token: followers.meta.next_token,
-    }
-  );
-
-  console.log(moreFollowers);
+  appendOutputFile('users.json', ']', false);
 };
 
-export const writeOutputFile = (tweets: any, isJson = true) => {
+/**
+ *
+ */
+export const fetchFollowers = async () => {
+  const followersBatch = [] as any[][];
+
+  const getFollowers = async (userId: string, nextToken: string) => {
+    const followers = await client.users.usersIdFollowers(userId, {
+      max_results: 1000,
+      ...(nextToken ? { pagination_token: nextToken } : {}),
+    });
+    console.log(followers?.data?.length);
+    console.log(followers?.meta);
+    return followers;
+  };
+
+  //NOTE
+  const getFollowersRecursive = async (userId: string, nextToken?: string) => {
+    const followers = await getFollowers(userId, nextToken);
+    if (followers.meta.next_token) {
+      followersBatch.push(followers.data);
+      await new Promise((resolve) => setTimeout(resolve, 61000));
+      await getFollowersRecursive(userId, followers.meta.next_token);
+    } else {
+      if (followers?.data && followers.data.length > 0) {
+        followersBatch.push(followers.data);
+      }
+    }
+  };
+
+  writeOutputFile('usersWithFollowers.json', '[', false);
+
+  const users = usersJson.flat();
+  //NOTE had to start from ~300th users because script bombed :(
+  const idx = users.findIndex((u) => u.id === '1371849749855363080');
+  const usersSlice = users.slice(idx + 1);
+  const userIds = new Set(usersSlice.map((u) => u.id));
+
+  for (const user of usersSlice) {
+    console.log(user.username);
+    await getFollowersRecursive(user.id);
+    const followersBatchFlat = followersBatch.flat();
+    appendOutputFile('usersWithFollowers.json', {
+      ...user,
+      followers_count: followersBatchFlat.length,
+      followers:
+        followersBatchFlat.length !== 0
+          ? followersBatchFlat.filter((f) => userIds.has(f?.id))
+          : [],
+    });
+    followersBatch.length = 0;
+    await new Promise((resolve) => setTimeout(resolve, 61000));
+  }
+
+  appendOutputFile('usersWithFollowers.json', ']', false);
+};
+
+export const writeOutputFile = (
+  fileName: string,
+  tweets: any,
+  isJson = true
+) => {
+  //Clear all the file if it exists
+  fs.rmSync(path.resolve(__dirname, `output/${fileName}`), {
+    force: true,
+  });
+
   //Ensure the directory exists to write to
   fs.mkdirSync(path.resolve(__dirname, `output/`), {
     recursive: true,
   });
 
-  //Clear all existing files out of the output directory
-  fs.rmSync(path.resolve(__dirname, `output/*`), {
-    recursive: true,
-    force: true,
-  });
-
   //Generate the file
   fs.writeFileSync(
-    path.resolve(__dirname, `output/tweetsWithFollowers.json`),
+    path.resolve(__dirname, `output/${fileName}`),
     isJson ? JSON.stringify(tweets) : tweets
   );
 };
 
-export const appendOutputFile = (tweets: any, isJson = true) => {
+export const appendOutputFile = (
+  fileName: string,
+  tweets: any,
+  isJson = true
+) => {
   fs.appendFileSync(
-    path.resolve(__dirname, `output/tweetsWithFollowers.json`),
+    path.resolve(__dirname, `output/${fileName}`),
     isJson ? ', ' + JSON.stringify(tweets) : tweets
   );
 };
